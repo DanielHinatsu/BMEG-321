@@ -1,0 +1,568 @@
+%Signal Processing Code
+%Description: This code was used to process the EMG data gathered by a bioradio and biocapture software. The real-time data EMG data collection framework was adapted from lab manuals to filter and clean Biceps muscle signals for use in controlling an arduino circuit. 
+
+
+
+DanBICEP_Raw(1,:) = [];
+DanBICEP_Filter(1,:) = [];
+% 2. Remove the DC offset from the  filtered’ signal that you exported from BioCapture by
+% subtracting the signal's mean from all samples.
+signal = DanBICEP_Filter - mean(DanBICEP_Filter);
+DanBICEP_Raw = DanBICEP_Raw*1000;
+%%
+Fs = 1 / 0.0005;
+wo = 60/(Fs/2); 
+bw = wo/35;
+[b,a] = iirnotch(wo,bw);
+signal = filtfilt(b, a, signal);
+% 3. Design a 4th order Butterworth band pass filter using MATLAB3s butter function to
+% maximize the amount of noise you remove from the signal. Select your filter cut-off
+% values with reference to literature.
+[b1, a1] = butter(4, [20/(Fs/2) 200/(Fs/2)], 'bandpass');
+% 4. Use MATLAB’s filtfilt function to now filter the signal output from step 2 using the filter
+% coefficients you calculated in step 3.
+EMG = filtfilt(b1, a1, signal);
+figure
+freqz(b1,a1,[],Fs)
+subplot(2,1,1)
+time = linspace(0, (length(signal)-1)*0.0005, length(signal));
+% 5. Perform a full-wave rectification of the signal from Step 4 and find the signal’s
+% envelope by lowpassing your rectified signal using a suitably low cutoff frequency
+% (Hint: the cutoff should be less than 5Hz).
+EMG_rect = abs(EMG);
+[b2, a2] = butter(4, 3/(Fs/2), 'low');
+envelope = filtfilt(b2, a2, EMG_rect);
+% 6. On a single plot, present the full original raw and filtered EMG signals that you loaded
+% in from the CSV files, as well as the processed signal output from step 4, and the EMG
+% envelope from step 5. Plot these signals against time.
+figure
+% plot(time, DanBICEP_Raw, 'black', 'LineWidth', 1);
+plot(time, signal, 'g', 'LineWidth', 1); hold on;
+plot(time, DanBICEP_Raw, 'black', 'LineWidth', 1);
+plot(time, EMG, 'r', 'LineWidth', 1);
+plot(time, envelope, 'b', 'LineWidth', 1);
+title('Bicep Contraction Time Domain')
+ylabel('Amplitude (mV)')
+xlabel('Time (s)')
+% 7. Using the techniques from Lab 1, now plot the single-sided frequency spectra (FFT) for
+% the raw, filtered, processed (step 4) and noise signals, where noise = raw - processed.
+L = length(DanBICEP_Raw);         
+T = 1/Fs; 
+t = (0:L-1)*T;
+%raw
+YA = fft(DanBICEP_Raw);
+P2A = abs(YA/L);
+P1A = P2A(1:L/2+1);
+P1A(2:end-1) = 2*P1A(2:end-1);
+fA = Fs/L*(0:(L/2));
+%filtered
+YB = fft(signal);
+P2B = abs(YB/L);
+P1B = P2B(1:L/2+1);
+P1B(2:end-1) = 2*P1B(2:end-1);
+fB = Fs/L*(0:(L/2));
+%processed
+YC = fft(EMG);
+P2C = abs(YC/L);
+P1C = P2C(1:L/2+1);
+P1C(2:end-1) = 2*P1C(2:end-1);
+fC = Fs/L*(0:(L/2));
+%noise
+noise = DanBICEP_Raw - EMG;
+YD = fft(noise);
+P2D = abs(YD/L);
+P1D = P2D(1:L/2+1);
+P1D(2:end-1) = 2*P1D(2:end-1);
+fD = Fs/L*(0:(L/2));
+figure
+t = tiledlayout(2,2,'TileSpacing','Compact');
+title(t, 'Single-Sided Frequency Spectra');
+xlabel(t, 'Frequency (Hz)');
+ylabel(t, 'Magnitude');
+nexttile(t)
+plot(fA,P1A, 'black', 'LineWidth', 1);
+legend('Raw EMG');
+ylim([0 0.1]);
+nexttile(t)
+plot(fB,P1B, 'g', 'LineWidth', 1);
+legend('Filtered EMG');
+ylim([0 0.1]);
+nexttile(t)
+plot(fC,P1C, 'r', 'LineWidth', 1);
+legend('Processed');
+ylim([0 0.1]);
+nexttile(t)
+plot(fD,P1D, 'm', 'LineWidth', 1);
+legend('Noise');
+ylim([0 0.1]);
+figure
+plot(time, envelope)
+integrated_EMG = trapz(time, envelope);
+disp('Integrated EMG value:');
+disp(integrated_EMG);
+% 8. For each of your contractions, calculate and record its integrated EMG values (area under
+% the curve of the enveloped EMG signal) using MATLABcs cumulative trapezoid function
+% envelope1 = envelope(5127:9483,:);
+% figure
+% plot(envelope1)
+%
+% integrated_EMG = trapz(time(5127:9483), envelope1);
+% disp('EMG 1:');
+% disp(integrated_EMG);
+%
+% envelope2 = envelope(13244:17566,:);
+% figure
+% plot(envelope2)
+%
+% integrated_EMG = trapz(time(13244:17566), envelope2);
+% disp('EMG 2:');
+% disp(integrated_EMG);
+%
+% envelope3 = envelope(21518:26566,:);
+% figure
+% plot(envelope3)
+%
+% integrated_EMG = trapz(time(21518:26566), envelope3);
+% disp('EMG 3:');
+% disp(integrated_EMG);
+%
+% envelope4 = envelope(28414:33133,:);
+% figure
+% plot(envelope4)
+%
+% integrated_EMG = trapz(time(28414:33133), envelope4);
+% disp('EMG 4:');
+% disp(integrated_EMG);
+%
+% envelope5 = envelope(35210:45143,:);
+% figure
+% plot(envelope5)
+%
+% integrated_EMG = trapz(time(35210:45143), envelope5);
+% disp('EMG 5:');
+% disp(integrated_EMG);
+
+% Bioradio Steam code
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Create your filters & define your variables here:
+
+Fs = 2000;
+F_low = 20;
+F_high = 200;
+Wn = [F_low/(Fs/2), F_high/(Fs/2)];
+[b, a] = butter(4, Wn, 'bandpass');
+
+% Define bandpass filter:
+
+% Define lowpass filter for envelope:
+cutoff_frequency = 3;
+[b_lowpass, a_lowpass] = butter(4, cutoff_frequency / (Fs/2), 'low');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+x_full = [];
+
+numEnabledBPChannels = double(myDevice.BioPotentialSignals.Count);
+numAuxChannels = double(myDevice.AuxiliarySignals.Count);
+numPOxChannels = double(myDevice.PulseOxSignals.Count);
+
+if numEnabledBPChannels == 0
+    myDevice.Disconnect;
+    BioRadioData = [];
+    errordlg('No BioPotential Channels Programmed. Return to BioCapture to Configure.')
+    return
+end
+
+sampleRate_BP = double(myDevice.BioPotentialSignals.SamplesPerSecond);
+sampleRate_Pod = 250;
+
+figure
+axis_handles = zeros(1,numEnabledBPChannels+numAuxChannels+numPOxChannels);
+for ch = 1:numEnabledBPChannels
+    axis_handles(ch) = subplot(length(axis_handles),1,ch);
+    if ch==1
+        title([char(BioRadio_Name)])
+    end
+    ylabel([char(myDevice.BioPotentialSignals.Item(ch-1).Name) ' (V)']);
+%     ylim(10*double([myDevice.BioPotentialSignals.Item(ch-1).MinValue myDevice.BioPotentialSignals.Item(ch-1).MaxValue]))
+    hold on
+end
+for ch = 1:numAuxChannels
+    axis_handles(ch+numEnabledBPChannels) = subplot(length(axis_handles),1,ch+numEnabledBPChannels);
+    ylabel(char(myDevice.AuxiliarySignals.Item(ch-1).Name));
+    ylim(double([myDevice.AuxiliarySignals.Item(ch-1).MinValue myDevice.AuxiliarySignals.Item(ch-1).MaxValue]))
+    hold on
+end
+for ch = 1:numPOxChannels
+    axis_handles(ch+numEnabledBPChannels+numAuxChannels) = subplot(length(axis_handles),1,ch+numEnabledBPChannels+numAuxChannels);
+    ylabel(char(myDevice.PulseOxSignals.Item(ch-1).Name));
+    ylim(double([myDevice.PulseOxSignals.Item(ch-1).MinValue myDevice.PulseOxSignals.Item(ch-1).MaxValue]))
+    hold on
+end
+xlabel('Time (s)')
+
+linkaxes(axis_handles,'x')
+
+
+
+BioPotentialSignals = cell(1,numEnabledBPChannels);
+
+AuxiliarySignals = cell(1,numAuxChannels);
+
+PulseOxSignals = cell(1,numPOxChannels);
+
+myDevice.StartAcquisition;
+
+plotWindow = 10;
+
+plotGain_BP = 1;
+
+elapsedTime = 0;
+tic;
+
+while elapsedTime < duration
+    pause(0.08)
+
+    for ch = 1:numEnabledBPChannels
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Place your processing here:
+        
+        % 'x' is each individual packet of EMG data as it is received, do
+        % not edit this line of code
+        x = myDevice.BioPotentialSignals.Item(ch-1).GetScaledValueArray.double';        
+      
+        % Insert your processing code here, remember, you should remove the
+        % mean, bandpass filter, and rectify your signal:
+        x = x - mean(x);
+        x = filtfilt(b, a, x);
+        x = abs(x);
+
+        % 'x_full' is the full signal comprised of all received EMG
+        % packets, this is the signal that you should envelope
+        x_full = [x_full;x];
+        
+        % You should define 'x_out' as the full enveloped signal that will
+        % be used from this point onwards:
+        x_out = filtfilt(b_lowpass, a_lowpass, x_full);
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        BioPotentialSignals{ch} = x_out;
+        if length(BioPotentialSignals{ch}) <= plotWindow*sampleRate_BP
+            cla(axis_handles(ch))
+            t = (0:(length(BioPotentialSignals{ch})-1))*(1/sampleRate_BP);
+            plot(axis_handles(ch),t,plotGain_BP*BioPotentialSignals{ch});
+            xlim([0 plotWindow])
+        else
+            if ch==1
+                t = ((length(BioPotentialSignals{ch})-(plotWindow*sampleRate_BP-1)):length(BioPotentialSignals{ch}))*(1/sampleRate_BP);
+            end
+            cla(axis_handles(ch))
+            plot(axis_handles(ch),t,plotGain_BP*BioPotentialSignals{ch}(end-plotWindow*sampleRate_BP+1:end));
+            xlim([t(end)-plotWindow t(end)])
+        end
+    end
+    
+    for ch = 1:numAuxChannels
+        AuxiliarySignals{ch} = [AuxiliarySignals{ch};myDevice.AuxiliarySignals.Item(ch-1).GetScaledValueArray.double'];
+        if length(AuxiliarySignals{ch}) <= plotWindow*sampleRate_Pod
+            cla(axis_handles(ch+numEnabledBPChannels))
+            t = (0:(length(AuxiliarySignals{ch})-1))*(1/sampleRate_Pod);
+            plot(axis_handles(ch+numEnabledBPChannels),t,AuxiliarySignals{ch});
+            xlim([0 plotWindow])
+        else
+            if ch==1
+                t_pod = ((length(AuxiliarySignals{ch})-(plotWindow*sampleRate_Pod-1)):length(AuxiliarySignals{ch}))*(1/sampleRate_Pod);
+            end
+            cla(axis_handles(ch+numEnabledBPChannels))
+            plot(axis_handles(ch+numEnabledBPChannels),t_pod,AuxiliarySignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+            xlim([t(end)-plotWindow t(end)])
+        end
+        hold on
+    end
+    
+    for ch = 1:numPOxChannels
+        PulseOxSignals{ch} = [PulseOxSignals{ch};myDevice.PulseOxSignals.Item(ch-1).GetScaledValueArray.double'];
+        if length(PulseOxSignals{ch}) <= plotWindow*sampleRate_Pod
+            cla(axis_handles(ch+numEnabledBPChannels+numAuxChannels))
+            t = (0:(length(PulseOxSignals{ch})-1))*(1/sampleRate_Pod);
+            plot(axis_handles(ch+numEnabledBPChannels+numAuxChannels),t,PulseOxSignals{ch});
+            xlim([0 plotWindow])
+        else
+            if ch==1
+                t_pod = ((length(PulseOxSignals{ch})-(plotWindow*sampleRate_Pod-1)):length(PulseOxSignals{ch}))*(1/sampleRate_Pod);
+            end
+            cla(axis_handles(ch+numEnabledBPChannels+numAuxChannels))
+            plot(axis_handles(ch+numEnabledBPChannels+numAuxChannels),t_pod,PulseOxSignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+            xlim([t(end)-plotWindow t(end)])
+        end
+    end
+    
+    elapsedTime = elapsedTime + toc;
+    tic;
+end
+
+myDevice.StopAcquisition;
+
+for ch = 1:numEnabledBPChannels
+    BioPotentialSignals{ch} = [BioPotentialSignals{ch};myDevice.BioPotentialSignals.Item(ch-1).GetScaledValueArray.double'];
+    t = ((length(BioPotentialSignals{ch})-(plotWindow*sampleRate_BP-1)):length(BioPotentialSignals{ch}))*(1/sampleRate_BP);
+    cla(axis_handles(ch))
+    plot(axis_handles(ch),t,plotGain_BP*BioPotentialSignals{ch}(end-plotWindow*sampleRate_BP+1:end));
+    xlim([t(end)-plotWindow t(end)])
+end
+
+for ch = 1:numAuxChannels
+    AuxiliarySignals{ch} = [AuxiliarySignals{ch};myDevice.AuxiliarySignals.Item(ch-1).GetScaledValueArray.double'];
+    t = ((length(AuxiliarySignals{ch})-(plotWindow*sampleRate_Pod-1)):length(AuxiliarySignals{ch}))*(1/sampleRate_Pod);
+    cla(axis_handles(ch+numEnabledBPChannels))
+    plot(axis_handles(ch+numEnabledBPChannels),t,AuxiliarySignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+    xlim([t(end)-plotWindow t(end)])
+end
+
+
+for ch = 1:numPOxChannels
+    PulseOxSignals{ch} = [PulseOxSignals{ch};myDevice.PulseOxSignals.Item(ch-1).GetScaledValueArray.double'];
+    t = ((length(PulseOxSignals{ch})-(plotWindow*sampleRate_Pod-1)):length(PulseOxSignals{ch}))*(1/sampleRate_Pod);
+    cla(axis_handles(ch+numEnabledBPChannels+numAuxChannels))
+    plot(axis_handles(ch+numEnabledBPChannels+numAuxChannels),t,PulseOxSignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+    xlim([t(end)-plotWindow t(end)])
+end
+
+BioRadioData = cell(1,3);
+BioRadioData{1} = BioPotentialSignals;
+BioRadioData{2} = AuxiliarySignals;
+BioRadioData{3} = PulseOxSignals;
+
+end
+
+% Arduino Steam code 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Create your filters & define your variables here
+
+% Define bandpass filter:
+
+Fs = 2000;
+F_low = 20;
+F_high = 200;
+Wn = [F_low/(Fs/2), F_high/(Fs/2)];
+[b, a] = butter(4, Wn, 'bandpass');
+
+% Define bandpass filter:
+
+% Define lowpass filter for envelope:
+cutoff_frequency = 3;
+[b_lowpass, a_lowpass] = butter(4, cutoff_frequency / (Fs/2), 'low');
+% Define lowpass filter for envelope:
+
+% Servo activation threshold:
+thresh = 1e-4;
+
+% Name of COM port the Arduino is connected to:
+COM = 'COM3';
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+x_full = [];
+
+%% Arduino Part 
+arduino=serial(COM,'BaudRate',9600); % create serial communication object on port COM3
+fopen(arduino);
+linFlag = 0;
+
+%%
+numEnabledBPChannels = double(myDevice.BioPotentialSignals.Count);
+numAuxChannels = double(myDevice.AuxiliarySignals.Count);
+numPOxChannels = double(myDevice.PulseOxSignals.Count);
+
+if numEnabledBPChannels == 0
+    myDevice.Disconnect;
+    BioRadioData = [];
+    errordlg('No BioPotential Channels Programmed. Return to BioCapture to Configure.')
+    return
+end
+
+sampleRate_BP = double(myDevice.BioPotentialSignals.SamplesPerSecond);
+sampleRate_Pod = 250;
+
+figure
+axis_handles = zeros(1,numEnabledBPChannels+numAuxChannels+numPOxChannels);
+for ch = 1:numEnabledBPChannels
+    axis_handles(ch) = subplot(length(axis_handles),1,ch);
+    if ch==1
+        title([char(BioRadio_Name)])
+    end
+    ylabel([char(myDevice.BioPotentialSignals.Item(ch-1).Name) ' (V)']);
+%     ylim(10*double([myDevice.BioPotentialSignals.Item(ch-1).MinValue myDevice.BioPotentialSignals.Item(ch-1).MaxValue]))
+    hold on
+end
+for ch = 1:numAuxChannels
+    axis_handles(ch+numEnabledBPChannels) = subplot(length(axis_handles),1,ch+numEnabledBPChannels);
+    ylabel(char(myDevice.AuxiliarySignals.Item(ch-1).Name));
+    ylim(double([myDevice.AuxiliarySignals.Item(ch-1).MinValue myDevice.AuxiliarySignals.Item(ch-1).MaxValue]))
+    hold on
+end
+for ch = 1:numPOxChannels
+    axis_handles(ch+numEnabledBPChannels+numAuxChannels) = subplot(length(axis_handles),1,ch+numEnabledBPChannels+numAuxChannels);
+    ylabel(char(myDevice.PulseOxSignals.Item(ch-1).Name));
+    ylim(double([myDevice.PulseOxSignals.Item(ch-1).MinValue myDevice.PulseOxSignals.Item(ch-1).MaxValue]))
+    hold on
+end
+xlabel('Time (s)')
+
+linkaxes(axis_handles,'x')
+
+BioPotentialSignals = cell(1,numEnabledBPChannels);
+
+AuxiliarySignals = cell(1,numAuxChannels);
+
+PulseOxSignals = cell(1,numPOxChannels);
+
+myDevice.StartAcquisition;
+
+plotWindow = 10;
+
+plotGain_BP = 1;
+
+elapsedTime = 0;
+tic;
+
+while elapsedTime < duration
+    pause(0.08)
+    for ch = 1:numEnabledBPChannels
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Place your processing here:
+        
+        % 'x' is each individual packet of EMG data as it is received, do
+        % not edit this line of code
+        x = myDevice.BioPotentialSignals.Item(ch-1).GetScaledValueArray.double';        
+         % Insert your processing code here, remember, you should remove the
+        % mean, bandpass filter, and rectify your signal:
+        x = x - mean(x);
+        x = filtfilt(b, a, x);
+        x = abs(x);
+
+        % 'x_full' is the full signal comprised of all received EMG
+        % packets, this is the signal that you should envelope
+        x_full = [x_full;x];
+        
+        % You should define 'x_out' as the full enveloped signal that will
+        % be used from this point onwards:
+        x_out = filtfilt(b_lowpass, a_lowpass, x_full);
+
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        BioPotentialSignals{ch} = x_out;
+        if length(BioPotentialSignals{ch}) <= plotWindow*sampleRate_BP
+            cla(axis_handles(ch))
+            t = (0:(length(BioPotentialSignals{ch})-1))*(1/sampleRate_BP);
+            plot(axis_handles(ch),t,plotGain_BP*BioPotentialSignals{ch});
+            xlim([0 plotWindow])
+            if length(plotGain_BP*BioPotentialSignals{ch}) < 500
+                signal = plotGain_BP*BioPotentialSignals{ch};
+            else
+                signal = plotGain_BP*BioPotentialSignals{ch}(end-500:end);
+            end
+        else
+            if ch==1
+                t = ((length(BioPotentialSignals{ch})-(plotWindow*sampleRate_BP-1)):length(BioPotentialSignals{ch}))*(1/sampleRate_BP);
+            end
+            cla(axis_handles(ch))
+            plot(axis_handles(ch),t,plotGain_BP*BioPotentialSignals{ch}(end-plotWindow*sampleRate_BP+1:end));
+            xlim([t(end)-plotWindow t(end)])
+            signal = plotGain_BP*BioPotentialSignals{ch}(end-500:end);
+        end
+    end
+    
+    for ch = 1:numAuxChannels
+        AuxiliarySignals{ch} = [AuxiliarySignals{ch};myDevice.AuxiliarySignals.Item(ch-1).GetScaledValueArray.double'];
+        if length(AuxiliarySignals{ch}) <= plotWindow*sampleRate_Pod
+            cla(axis_handles(ch+numEnabledBPChannels))
+            t = (0:(length(AuxiliarySignals{ch})-1))*(1/sampleRate_Pod);
+            plot(axis_handles(ch+numEnabledBPChannels),t,AuxiliarySignals{ch});
+            xlim([0 plotWindow])
+        else
+            if ch==1
+                t_pod = ((length(AuxiliarySignals{ch})-(plotWindow*sampleRate_Pod-1)):length(AuxiliarySignals{ch}))*(1/sampleRate_Pod);
+            end
+            cla(axis_handles(ch+numEnabledBPChannels))
+            plot(axis_handles(ch+numEnabledBPChannels),t_pod,AuxiliarySignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+            xlim([t(end)-plotWindow t(end)])
+        end
+        hold on
+    end
+    
+    for ch = 1:numPOxChannels
+        PulseOxSignals{ch} = [PulseOxSignals{ch};myDevice.PulseOxSignals.Item(ch-1).GetScaledValueArray.double'];
+        if length(PulseOxSignals{ch}) <= plotWindow*sampleRate_Pod
+            cla(axis_handles(ch+numEnabledBPChannels+numAuxChannels))
+            t = (0:(length(PulseOxSignals{ch})-1))*(1/sampleRate_Pod);
+            plot(axis_handles(ch+numEnabledBPChannels+numAuxChannels),t,PulseOxSignals{ch});
+            xlim([0 plotWindow])
+        else
+            if ch==1
+                t_pod = ((length(PulseOxSignals{ch})-(plotWindow*sampleRate_Pod-1)):length(PulseOxSignals{ch}))*(1/sampleRate_Pod);
+            end
+            cla(axis_handles(ch+numEnabledBPChannels+numAuxChannels))
+            plot(axis_handles(ch+numEnabledBPChannels+numAuxChannels),t_pod,PulseOxSignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+            xlim([t(end)-plotWindow t(end)])
+        end
+    end
+    
+    %% Arduino Part
+    max_value = max(signal);
+    if max_value>thresh
+        fprintf(arduino,'1')
+        disp([num2str(max_value) 'V, ' 'Servo is on!!'])
+    else
+        fprintf(arduino,'2')
+        disp([num2str(max_value) 'V, ' 'Servo is off!!'])
+    end
+
+    yline(thresh,'--','Threshold','Color','r');
+    elapsedTime = elapsedTime + toc;
+    tic;
+end
+
+fclose(arduino);
+delete(arduino);
+
+
+myDevice.StopAcquisition;
+
+for ch = 1:numEnabledBPChannels
+    BioPotentialSignals{ch} = [BioPotentialSignals{ch};myDevice.BioPotentialSignals.Item(ch-1).GetScaledValueArray.double'];
+    t = ((length(BioPotentialSignals{ch})-(plotWindow*sampleRate_BP-1)):length(BioPotentialSignals{ch}))*(1/sampleRate_BP);
+    cla(axis_handles(ch))
+    plot(axis_handles(ch),0:1/Fs:(length(x_out)-1)/Fs,x_out);
+    xlim([t(end)-plotWindow t(end)])
+    yline(thresh,'--','Threshold','Color','r');
+end
+
+for ch = 1:numAuxChannels
+    AuxiliarySignals{ch} = [AuxiliarySignals{ch};myDevice.AuxiliarySignals.Item(ch-1).GetScaledValueArray.double'];
+    t = ((length(AuxiliarySignals{ch})-(plotWindow*sampleRate_Pod-1)):length(AuxiliarySignals{ch}))*(1/sampleRate_Pod);
+    cla(axis_handles(ch+numEnabledBPChannels))
+    plot(axis_handles(ch+numEnabledBPChannels),t,AuxiliarySignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+    xlim([t(end)-plotWindow t(end)])
+    yline(thresh,'--','Threshold','Color','r');
+end
+
+
+for ch = 1:numPOxChannels
+    PulseOxSignals{ch} = [PulseOxSignals{ch};myDevice.PulseOxSignals.Item(ch-1).GetScaledValueArray.double'];
+    t = ((length(PulseOxSignals{ch})-(plotWindow*sampleRate_Pod-1)):length(PulseOxSignals{ch}))*(1/sampleRate_Pod);
+    cla(axis_handles(ch+numEnabledBPChannels+numAuxChannels))
+    plot(axis_handles(ch+numEnabledBPChannels+numAuxChannels),t,PulseOxSignals{ch}(end-plotWindow*sampleRate_Pod+1:end));
+    xlim([t(end)-plotWindow t(end)])
+    yline(thresh,'--','Threshold','Color','r');
+end
+
+BioRadioData = cell(1,3);
+BioRadioData{1} = BioPotentialSignals;
+BioRadioData{2} = AuxiliarySignals;
+BioRadioData{3} = PulseOxSignals;
+
+end
