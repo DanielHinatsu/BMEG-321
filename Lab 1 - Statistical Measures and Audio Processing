@@ -1,5 +1,5 @@
 % Statistical Measures Code
-% Description: This code is intended to characterize a dataset of biological data gathered by 3 different apple-watch users. This document also includes code for the post-processing of a distorted audio sample 
+% Description: This code is intended to characterize a dataset of biological data gathered by 3 different apple-watch users. This document also includes code for the recording, random distortion and post processing of an audio sample 
 
 % Subject 1 = AYEFCWQ
 % Subject 2 = AYWIEKR
