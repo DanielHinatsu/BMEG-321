@@ -1,0 +1,268 @@
+% Statistical Measures Code
+% Description: This code is intended to characterize a dataset of biological data gathered by 3 different apple-watch users. This document also includes code for the post-processing of a distorted audio sample 
+
+% Subject 1 = AYEFCWQ
+% Subject 2 = AYWIEKR
+% Subject 3 = AZIK4ZA
+
+% Loads the requested data into memory
+S1_hr = readtable('AYEFCWQ_hr.csv'); % beats per minute
+S1_sleep = readtable('AYEFCWQ_sleep.csv'); % tens of seconds (divide by 6 to get minutes)
+S1_steps = readtable('AYEFCWQ_steps.csv'); % steps per minute
+S2_hr = readtable('AYWIEKR_hr.csv'); % beats per minute
+S2_sleep = readtable('AYWIEKR_sleep.csv'); % seconds (divide by 60 to get minutes)
+S2_steps = readtable('AYWIEKR_steps.csv'); % steps per minute
+S3_hr = readtable('AZIK4ZA_hr.csv'); % beats per minute
+S3_sleep = readtable('AZIK4ZA_sleep.csv'); % seconds (divide by 60 to get minutes)
+S3_steps = readtable('AZIK4ZA_steps.csv'); % steps per minute
+
+
+%% Logical indexing to remove rows with 'awake' or 'wake' in Sleep tables (remove this code block if awake/wake is not removed)
+rowsToRemoveS1 = strcmp(S1_sleep.stage, 'awake') | strcmp(S1_sleep.stage, 'wake');
+S1_sleep(rowsToRemoveS1, :) = [];
+rowsToRemoveS2 = strcmp(S2_sleep.stage, 'awake') | strcmp(S2_sleep.stage, 'wake');
+S2_sleep(rowsToRemoveS2, :) = [];
+rowsToRemoveS3 = strcmp(S3_sleep.stage, 'awake') | strcmp(S3_sleep.stage, 'wake');
+S3_sleep(rowsToRemoveS3, :) = [];
+
+
+%% Find Mean
+% Calculates the mean of the biometric columns
+meanS1_hr = mean(S1_hr.heartrate,'omitnan');
+meanS1_sleep = mean(S1_sleep.stage_duration, 'omitnan') / 6; % Converting mean sleep duration to minutes
+meanS1_steps = mean(S1_steps.steps, 'omitnan');
+meanS2_hr = mean(S2_hr.heartrate,'omitnan');
+meanS2_sleep = mean(S2_sleep.stage_duration, 'omitnan') / 60; % Converting mean sleep duration to minutes
+meanS2_steps = mean(S2_steps.steps, 'omitnan');
+meanS3_hr = mean(S3_hr.heartrate,'omitnan');
+meanS3_sleep = mean(S3_sleep.stage_duration, 'omitnan') / 60; % Converting mean sleep duration to minutes
+meanS3_steps = mean(S3_steps.steps, 'omitnan');
+%% Find Mode
+% Calculates the mode
+modeS1_hr = mode(S1_hr.heartrate);
+modeS1_sleep = mode(S1_sleep.stage_duration) / 6;
+modeS1_steps = mode(S1_steps.steps);
+modeS2_hr = mode(S2_hr.heartrate);
+modeS2_sleep = mode(S2_sleep.stage_duration) / 60;
+modeS2_steps = mode(S2_steps.steps);
+modeS3_hr = mode(S3_hr.heartrate);
+modeS3_sleep = mode(S3_sleep.stage_duration) / 60;
+modeS3_steps = mode(S3_steps.steps);
+%% Find Median
+% Calculates the median
+medianS1_hr = median(S1_hr.heartrate, 'omitnan');
+medianS1_sleep = median(S1_sleep.stage_duration, 'omitnan') / 6;
+medianS1_steps = median(S1_steps.steps, 'omitnan');
+medianS2_hr = median(S2_hr.heartrate, 'omitnan');
+medianS2_sleep = median(S2_sleep.stage_duration, 'omitnan') / 60;
+medianS2_steps = median(S2_steps.steps, 'omitnan');
+medianS3_hr = median(S3_hr.heartrate, 'omitnan');
+medianS3_sleep = median(S3_sleep.stage_duration, 'omitnan') / 60;
+medianS3_steps = median(S3_steps.steps, 'omitnan');
+%% Find Range
+% Calculates the range
+rangeS1_hr = max(S1_hr.heartrate) - min(S1_hr.heartrate);
+rangeS1_sleep = (max(S1_sleep.stage_duration) - min(S1_sleep.stage_duration)) / 6;
+rangeS1_steps = max(S1_steps.steps) - min(S1_steps.steps); % strange number here (1046)
+rangeS2_hr = max(S2_hr.heartrate) - min(S2_hr.heartrate);
+rangeS2_sleep = (max(S2_sleep.stage_duration) - min(S2_sleep.stage_duration)) / 60;
+rangeS2_steps = max(S2_steps.steps) - min(S2_steps.steps);
+rangeS3_hr = max(S3_hr.heartrate) - min(S3_hr.heartrate);
+rangeS3_sleep = (max(S3_sleep.stage_duration) - min(S3_sleep.stage_duration)) / 60;
+rangeS3_steps = max(S3_steps.steps) - min(S3_steps.steps);
+%% Find Standard Deviation
+% Calculates the standard deviation
+stdS1_hr = std(S1_hr.heartrate, 'omitnan');
+stdS1_sleep = std(S1_sleep.stage_duration, 'omitnan') / 6;
+stdS1_steps = std(S1_steps.steps, 'omitnan');
+stdS2_hr = std(S2_hr.heartrate, 'omitnan');
+stdS2_sleep = std(S2_sleep.stage_duration, 'omitnan') / 60;
+stdS2_steps = std(S2_steps.steps, 'omitnan');
+stdS3_hr = std(S3_hr.heartrate, 'omitnan');
+stdS3_sleep = std(S3_sleep.stage_duration, 'omitnan') / 60;
+stdS3_steps = std(S3_steps.steps, 'omitnan');
+%% Find Correlation Between Heart Rate and Steps
+% Subject 1
+[idxT1_1,~] = ismember(S1_hr.datetime, S1_steps.datetime);
+[idxT2_1,~] = ismember(S1_steps.datetime, S1_hr.datetime);
+% Finds the indices where each of these matching times are
+idxT1_1 = find(idxT1_1);
+idxT2_1 = find(idxT2_1);
+% Creates new tables with matching datetime vectors
+New_S1_hr = S1_hr(idxT1_1,:);
+New_S1_steps = S1_steps(idxT2_1,:);
+% Finds the correlation coefficient between the 2 recordings
+c1 = corrcoef(New_S1_hr.heartrate, New_S1_steps.steps);
+% Subject 2
+[idxT1_2,~] = ismember(S2_hr.datetime, S2_steps.datetime);
+[idxT2_2,~] = ismember(S2_steps.datetime, S2_hr.datetime);
+% Finds the indices where each of these matching times are
+idxT1_2 = find(idxT1_2);
+idxT2_2 = find(idxT2_2);
+% Creates new tables with matching datetime vectors
+New_S2_hr = S2_hr(idxT1_2,:);
+New_S2_steps = S2_steps(idxT2_2,:);
+% Finds the correlation coefficient between the 2 recordings
+c2 = corrcoef(New_S2_hr.heartrate, New_S2_steps.steps);
+% Subject 3
+[idxT1_3,~] = ismember(S3_hr.datetime, S3_steps.datetime);
+[idxT2_3,~] = ismember(S3_steps.datetime, S3_hr.datetime);
+% Finds the indices where each of these matching times are
+idxT1_3 = find(idxT1_3);
+idxT2_3 = find(idxT2_3);
+% Creates new tables with matching datetime vectors
+New_S3_hr = S3_hr(idxT1_3,:);
+New_S3_steps = S3_steps(idxT2_3,:);
+% Finds the correlation coefficient between the 2 recordings
+c3 = corrcoef(New_S3_hr.heartrate, New_S3_steps.steps);
+
+%Audio Filtering Code
+%%PART A
+Fs = 44100; % Original sampling frequency
+% Record original audio (only needed to be done once)
+% nBits = 16;
+% nChannels = 1;
+% ID = -1;
+% recObj = audiorecorder(Fs,nBits,nChannels,ID);
+%
+% disp("Begin speaking.")
+% recDuration = 3;
+% recordblocking(recObj,recDuration);
+% disp("End of recording.")
+%
+% play(recObj); % Play audio
+myRecording = getaudiodata(recObj); % Array of audio values
+% Plot of original audio
+tiledlayout('flow');
+nexttile;
+plot(myRecording);
+title('Original Audio');
+% Downsample audio to 1000Hz
+down_recObj = downsample(myRecording,44);
+% Plot of downsampled audio
+nexttile;
+plot(down_recObj);
+title('Downsampled Audio');
+sound(down_recObj(:,1),1000) % Play downsampled audio
+%%PART B
+% Modified code from FFT function Noisy Signal
+L = recObj.TotalSamples;         
+T = 1/Fs; 
+t = (0:L-1)*T;
+Y = fft(myRecording);
+P2 = abs(Y/L);
+P1 = P2(1:L/2+1);
+P1(2:end-1) = 2*P1(2:end-1);
+f = Fs/L*(0:(L/2));
+% Plot of single sided amplitude spectrum of recording
+figure;
+plot(f,P1,"LineWidth",3)
+title("Single-Sided Amplitude Spectrum of Recording")
+xlabel("f (Hz)")
+ylabel("|P1(f)|")
+%%PART C
+snr = 9; % SNR value so you cannot make out the audio
+Y_noise = awgn(myRecording,snr); % Apply white noise
+sound(Y_noise, Fs); % Play noisy audio
+t_original = (0:length(myRecording)-1) / Fs;
+t_noisy = (0:length(Y_noise)-1) / Fs;
+f_original = linspace(0, Fs, length(myRecording));
+f_noisy = linspace(0, Fs, length(Y_noise));
+fft_original = fft(myRecording);
+fft_noisy = fft(Y_noise);
+% Plotting time domain and frequency domain of original and noisy signal
+figure;
+subplot(2, 2, 1);
+plot(t_original, myRecording);
+title('Original Signal (Time Domain)');
+xlabel('Time (s)');
+ylabel('Amplitude');
+subplot(2, 2, 2);
+plot(t_noisy, Y_noise);
+title('Noisy Signal (Time Domain)');
+xlabel('Time (s)');
+ylabel('Amplitude');
+subplot(2, 2, 3);
+plot(f_original, abs(fftshift(fft_original))/length(myRecording));
+title('Original Signal (Frequency Domain)');
+xlabel('Frequency (Hz)');
+ylabel('Amplitude');
+subplot(2, 2, 4);
+plot(f_noisy, abs(fftshift(fft_noisy))/length(Y_noise));
+title('Noisy Signal (Frequency Domain)');
+xlabel('Frequency (Hz)');
+ylabel('Amplitude');
+sgtitle(['SNR = ', num2str(snr), ' dB']);
+% Design FIR filter
+passband_freq = 1100;  
+stopband_freq = 3200;  
+YourFilt = designfilt('lowpassfir', 'SampleRate', Fs, ...       
+      'PassbandFrequency', passband_freq, ... 
+      'StopbandFrequency', stopband_freq, ...
+      'PassbandRipple', 1, 'StopbandAttenuation', 95);
+Y = fft(Y_noise);
+P2 = abs(Y/L);
+P1 = P2(1:L/2+1);
+P1(2:end-1) = 2*P1(2:end-1);
+f = Fs/L*(0:(L/2));
+% Plot of single sided amplitude spectrum of noisy recording
+figure;
+plot(f,P1,"LineWidth",3)
+title("Single-Sided Amplitude Spectrum of Noisy Recording")
+xlabel("f (Hz)")
+ylabel("|P1(f)|")
+% Apply the filter to the noisy signal
+filtered_signal = filter(YourFilt, Y_noise);
+Y = fft(filtered_signal);
+P2 = abs(Y/L);
+P1 = P2(1:L/2+1);
+P1(2:end-1) = 2*P1(2:end-1);
+f = Fs/L*(0:(L/2));
+% Plot of single sided amplitude spectrum of filtered recording
+figure;
+plot(f,P1,"LineWidth",3)
+title("Single-Sided Amplitude Spectrum of Filtered Recording")
+xlabel("f (Hz)")
+ylabel("|P1(f)|")
+% Plot of original, noisy and filtered signal in frequency domain
+f_original = linspace(0, Fs, length(myRecording));
+f_noisy = linspace(0, Fs, length(Y_noise));
+f_filtered = linspace(0, Fs, length(filtered_signal));
+figure;
+subplot(3, 1, 1);
+plot(f_original, abs(fft(myRecording))/length(myRecording));
+title('Original Signal (Frequency Domain)');
+xlabel('Frequency (Hz)');
+ylabel('Amplitude');
+subplot(3, 1, 2);
+plot(f_noisy, abs(fft(Y_noise))/length(Y_noise));
+title('Noisy Signal (Frequency Domain)');
+xlabel('Frequency (Hz)');
+ylabel('Amplitude');
+subplot(3, 1, 3);
+plot(f_filtered, abs(fft(filtered_signal))/length(filtered_signal));
+title('Filtered Signal (Frequency Domain)');
+xlabel('Frequency (Hz)');
+ylabel('Amplitude');
+% Plot of original, noisy and filtered signal in time domain
+t_original = (0:length(myRecording)-1) / Fs;
+t_noisy = (0:length(Y_noise)-1) / Fs;
+t_filtered = (0:length(filtered_signal)-1) / Fs;
+figure;
+subplot(3, 1, 1);
+plot(t_original, myRecording);
+title('Original Signal (Time Domain)');
+xlabel('Time (s)');
+ylabel('Amplitude');
+subplot(3, 1, 2);
+plot(t_noisy, Y_noise);
+title('Noisy Signal (Time Domain)');
+xlabel('Time (s)');
+ylabel('Amplitude');
+subplot(3, 1, 3);
+plot(t_filtered, filtered_signal);
+title('Filtered Signal (Time Domain)');
+xlabel('Time (s)');
+ylabel('Amplitude');
+sgtitle(['SNR = ', num2str(snr), ' dB']);
+sound(filtered_signal, Fs); % Play filtered audio
